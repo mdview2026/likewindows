@@ -1,0 +1,31 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build (debug)
+        run: swift build
+
+      - name: Build (release)
+        run: swift build -c release
+
+      - name: 自检（编译产物能跑、配置能读、Dock 解析正常）
+        run: .build/release/LikeWindows --selftest
+
+      - name: 图标生成脚本可运行
+        run: swift scripts/make-icon.swift && ls -l Resources/AppIcon.icns
+
+      - name: 打包脚本（ad-hoc 签名，不公证）
+        run: DRY_RUN=1 ./scripts/release.sh

@@ -1,0 +1,13 @@
+# 构建产物
+.build/
+build/
+dist/
+*.dmg
+*.zip
+Resources/AppIcon.icns
+
+# 公证凭证等本地配置
+release.env
+
+# macOS
+.DS_Store
