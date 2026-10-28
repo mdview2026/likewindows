@@ -18,7 +18,19 @@ enum SelfTest {
         return 0
     }
 
+    /// 卡死保护：自检里有几处系统调用（剪贴板、Dock 偏好）在无图形会话时可能永久阻塞
+    private static func armWatchdog(seconds: Double) {
+        let thread = Thread {
+            Thread.sleep(forTimeInterval: seconds)
+            print("\n自检超时（\(Int(seconds)) 秒），强制退出")
+            exit(2)
+        }
+        thread.name = "selftest-watchdog"
+        thread.start()
+    }
+
     static func run() -> Int32 {
+        armWatchdog(seconds: 20)
         print("== LikeWindows 自检 ==")
         print("辅助功能权限：\(AXIsProcessTrusted() ? "已授权" : "未授权（Win 组合键不会生效）")")
         ConfigStore.shared.load()
@@ -33,12 +45,17 @@ enum SelfTest {
                   + "path=\(item.url?.path ?? "-")")
         }
 
-        print("\n剪贴板监听：采样 2 秒（期间可复制任意文本）…")
-        ClipboardStore.shared.start()
-        RunLoop.current.run(until: Date().addingTimeInterval(2.0))
-        print("  记录到 \(ClipboardStore.shared.items.count) 条")
-        for item in ClipboardStore.shared.items.prefix(3) {
-            print("  · \(item.preview.prefix(60))  [\(item.relativeTime)]")
+        if CommandLine.arguments.contains("--clipboard") {
+            print("\n剪贴板监听：采样 2 秒（期间可复制任意文本）…")
+            ClipboardStore.shared.start()
+            RunLoop.current.run(until: Date().addingTimeInterval(2.0))
+            print("  记录到 \(ClipboardStore.shared.items.count) 条")
+            for item in ClipboardStore.shared.items.prefix(3) {
+                print("  · \(item.preview.prefix(60))  [\(item.relativeTime)]")
+            }
+        } else {
+            // CI 上没有可达的剪贴板服务，读 NSPasteboard 会一直卡住；默认跳过
+            print("\n剪贴板采样：跳过（需要时加 --clipboard）")
         }
 
         let bindings = KeyTable.activeWinBindings(for: ConfigStore.shared.value)

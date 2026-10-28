@@ -13,19 +13,26 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Swift version
+        timeout-minutes: 2
         run: swift --version
 
       - name: Build (debug)
+        timeout-minutes: 10
         run: swift build
 
       - name: Build (release)
+        timeout-minutes: 10
         run: swift build -c release
 
-      - name: 自检（编译产物能跑、配置能读、Dock 解析正常）
+      # 不读系统剪贴板：macOS runner 上没有可达的剪贴板服务，会阻塞
+      - name: 自检（配置 / Dock 解析 / 生效组合）
+        timeout-minutes: 3
         run: .build/release/LikeWindows --selftest
 
       - name: 图标生成脚本可运行
+        timeout-minutes: 5
         run: swift scripts/make-icon.swift && ls -l Resources/AppIcon.icns
 
       - name: 打包脚本（ad-hoc 签名，不公证）
+        timeout-minutes: 8
         run: DRY_RUN=1 ./scripts/release.sh
